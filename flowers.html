@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>For Kanupriya — A Special Moment</title>
+  <style>
+    :root{--p1:#ffdde8;--p2:#ffc7df;--p3:#ff9fcf}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;background:#111;color:#111}
+    .stage{position:relative;height:100vh;width:100vw;overflow:hidden;display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center center}
+    .veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,250,254,0.18),rgba(255,240,246,0.25));backdrop-filter:blur(2px);pointer-events:none}
+
+    .card{position:relative;z-index:40;width:min(960px,92%);max-width:980px;padding:26px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,250,252,0.82));box-shadow:0 20px 50px rgba(12,6,20,0.5);border:1px solid rgba(255,240,245,0.6);display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:center}
+    .left{padding:8px}
+    .title{font-family:Georgia, 'Times New Roman', serif;font-size:26px;margin:0;color:#2b1020;text-align:left}
+    .subtitle{margin-top:6px;color:#5b2f3f;font-weight:600}
+
+    .heart-btn{margin-top:12px;display:inline-flex;align-items:center;gap:10px;background:linear-gradient(90deg,#ff9fcf,#ffc7df);border:none;padding:12px 18px;border-radius:999px;color:white;font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(255,120,170,0.18)}
+    .heart-btn:active{transform:translateY(2px)}
+
+    .note{margin-top:18px;background:transparent;border-left:3px solid rgba(255,140,170,0.3);padding:12px 14px;border-radius:8px;color:#472a36;font-size:16px;line-height:1.5;min-height:88px;white-space:pre-wrap}
+
+    .controls{display:flex;gap:10px;margin-top:12px}
+    .small-btn{background:transparent;border:1px solid rgba(50,20,30,0.08);padding:8px 12px;border-radius:10px;cursor:pointer}
+
+    .petals{position:absolute;inset:0;z-index:45;pointer-events:none}
+    .petal{position:absolute;top:-10vh;width:36px;height:34px;opacity:0;will-change:transform,opacity}
+
+    @keyframes fallDown{0%{transform:translateY(-30vh) translateX(0) rotate(0deg);opacity:0}8%{opacity:1}100%{transform:translateY(120vh) translateX(var(--drift,0px)) rotate(360deg);opacity:0.95}}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+    .reveal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,8,12,0.6);backdrop-filter:blur(4px);z-index:90;opacity:0;pointer-events:none;transition:opacity .4s}
+    .reveal.open{opacity:1;pointer-events:auto}
+    .reveal-card{background:linear-gradient(180deg,#fff7fb,#fff1f6);padding:28px;border-radius:16px;max-width:820px;width:92%;text-align:center;box-shadow:0 30px 80px rgba(10,6,20,0.6)}
+    .reveal h1{margin:0;font-family:Georgia, serif;font-size:34px;color:#3a2033}
+    .reveal p{margin-top:12px;font-size:18px;color:#4a2d3a}
+
+    .couple-preview{display:block;width:100%;height:100%;border-radius:12px;overflow:hidden;box-shadow:inset 0 -80px 120px rgba(255,230,240,0.25)}
+    .couple-preview img{width:100%;height:100%;object-fit:cover;display:block}
+
+    @media (max-width:860px){.card{grid-template-columns:1fr;} .couple-preview{height:220px}}
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="veil"></div>
+
+    <div class="card">
+      <div class="left">
+        <h2 class="title">For Kanupriya — a small world of sakura and words</h2>
+        <div class="subtitle">A moment made just for you</div>
+
+        <button class="heart-btn" id="openBtn">💗 Open this for me</button>
+        <div class="note" id="typedArea">Press the button and I'll share something from the heart…</div>
+
+        <div class="controls">
+          <button class="small-btn" id="downloadBtn">Download this page</button>
+          <button class="small-btn" id="toggleMusic">Play gentle tune</button>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="couple-preview"><img id="previewImg" src="" alt="preview"/></div>
+      </div>
+    </div>
+
+    <div class="petals" id="petals"></div>
+
+    <div class="reveal" id="reveal">
+      <div class="reveal-card">
+        <h1>To Kanupriya, with all my heart</h1>
+        <p>You are the gentle bloom in my every spring. When petals fall, it's like the world remembers how beautiful you are.</p>
+        <button class="heart-btn" id="closeReveal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Use the uploaded file path (as provided in the workspace). We'll set it via JS so encoding/spaces won't break CSS.
+    // The file path from your workspace is used directly but encoded to avoid special-character issues.
+    const rawBgPath = '/mnt/data/Screenshot 2025-11-24 at 1.26.28 AM.png';
+    const bgPath = encodeURI(rawBgPath);
+    const stage = document.getElementById('stage');
+    const previewImg = document.getElementById('previewImg');
+
+    // set background and preview image safely
+    try{
+      stage.style.backgroundImage = 'url("' + bgPath + '")';
+      previewImg.src = bgPath;
+    }catch(e){console.warn('Failed to set image path', e)}
+
+    // ---- Petals & animations (fixed, reliable) ----
+    const PETAL_COUNT = 110;
+    const petalsContainer = document.getElementById('petals');
+    const vw = ()=>Math.max(document.documentElement.clientWidth||0, window.innerWidth||0);
+    function rand(min,max){return Math.random()*(max-min)+min}
+
+    // create petals with randomized properties and proper CSS animations
+    for(let i=0;i<PETAL_COUNT;i++){
+      const el = document.createElement('div');
+      el.className = 'petal';
+
+      const size = Math.round(rand(18,64));
+      el.style.width = size + 'px';
+      el.style.height = Math.round(size * 0.85) + 'px';
+
+      // place across the viewport
+      el.style.left = rand(-0.08*vw(), vw()*1.08) + 'px';
+      el.style.top = -rand(0,40) + 'vh';
+
+      // per-petal motion
+      const drift = Math.round(rand(-260,260));
+      const duration = rand(9,22).toFixed(2);
+      const delay = rand(-22,0).toFixed(2);
+      el.style.setProperty('--drift', drift + 'px');
+      el.style.animation = 'fallDown ' + duration + 's linear ' + delay + 's infinite';
+
+      // inner svg for petal shape and rotation
+      const inner = document.createElement('div');
+      inner.style.width = '100%'; inner.style.height = '100%';
+      inner.style.transformOrigin = '50% 50%';
+      inner.style.animation = 'spin ' + (rand(4,12).toFixed(2)) + 's linear ' + delay + 's infinite';
+      const color = ['#ffdde8','#ffc7df','#ff9fcf'][Math.floor(rand(0,3))];
+      inner.innerHTML = "<svg viewBox='0 0 24 24' width='100%' height='100%'><path d='M12 2 C10 6 6 6 4 10 C2 14 6 18 10 20 C14 22 16 18 18 14 C20 10 14 6 12 2 Z' fill='" + color + "'/></svg>";
+
+      el.appendChild(inner);
+      petalsContainer.appendChild(el);
+    }
+
+    // ---- Buttons & interactions (fixed typewriter + reveal + audio + download) ----
+    const openBtn = document.getElementById('openBtn');
+    const typedArea = document.getElementById('typedArea');
+    const reveal = document.getElementById('reveal');
+    const closeReveal = document.getElementById('closeReveal');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const toggleMusic = document.getElementById('toggleMusic');
+
+    const messageLines = [
+      'Just like the cherry blossoms fall to the ground in spring, this winter I have fallen for you.'
+    ];
+
+    let typed = false;
+
+    function playChime(){
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+        const o1 = ctx.createOscillator(); const o2 = ctx.createOscillator();
+        const g = ctx.createGain(); g.gain.value = 0.0001; g.connect(ctx.destination);
+        o1.type = 'sine'; o2.type = 'sine';
+        o1.frequency.setValueAtTime(440, now); o2.frequency.setValueAtTime(660, now);
+        o1.connect(g); o2.connect(g);
+        g.gain.exponentialRampToValueAtTime(0.12, now+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, now+2.2);
+        o1.start(now); o2.start(now);
+        o1.stop(now+2.3); o2.stop(now+2.3);
+      }catch(e){console.warn('Audio not available', e)}
+    }
+
+    openBtn.addEventListener('click', ()=>{
+      if(typed){
+        // open reveal if already typed
+        reveal.classList.add('open');
+        return;
+      }
+
+      // mark typed so subsequent clicks open reveal
+      typed = true;
+
+      // play chime once
+      playChime();
+
+      // typewriter effect (build whole content progressively)
+      typedArea.textContent = '';
+      let line = 0; let ch = 0;
+      function tick(){
+        if(line >= messageLines.length) return;
+        const text = messageLines[line];
+        if(ch <= text.length){
+          // build full text so far
+          const head = messageLines.slice(0, line).join('\n\n');
+          let out = head ? head + '\n\n' : '';
+          out += text.slice(0, ch);
+          // cursor
+          out += (ch % 2 ? '|' : '');
+          typedArea.textContent = out;
+          ch++;
+          setTimeout(tick, 40 + Math.random()*30);
+        } else {
+          // finish line and go to next
+          ch = 0; line++; setTimeout(tick, 300);
+        }
+      }
+      tick();
+    });
+
+    closeReveal.addEventListener('click', ()=>{ reveal.classList.remove('open'); });
+
+    // Download page
+    downloadBtn.addEventListener('click', ()=>{
+      const html = '<!doctype html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([html], {type:'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'for-kanupriya.html'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    // Toggle ambient music (optional)
+    let musicOn = false; let musicNodes = null;
+    toggleMusic.addEventListener('click', ()=>{
+      if(musicOn){ // stop
+        if(musicNodes){ const {ctx,osc,lfo,gain} = musicNodes; const t = ctx.currentTime; gain.gain.exponentialRampToValueAtTime(0.0001, t+0.6); osc.stop(t+0.8); lfo.stop(t+0.8); }
+        musicOn = false; toggleMusic.textContent = 'Play gentle tune'; musicNodes = null; return;
+      }
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 220;
+        const gain = ctx.createGain(); gain.gain.value = 0.0001; gain.connect(ctx.destination);
+        osc.connect(gain);
+        const lfo = ctx.createOscillator(); lfo.frequency.value = 0.12; const lfoGain = ctx.createGain(); lfoGain.gain.value = 30; lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
+        osc.start(); lfo.start(); gain.gain.exponentialRampToValueAtTime(0.06, now+0.6);
+        musicOn = true; musicNodes = {ctx,osc,lfo,gain}; toggleMusic.textContent = 'Stop gentle tune';
+      }catch(e){console.warn('music error',e)}
+    });
+
+    // reposition petals on resize
+    window.addEventListener('resize', ()=>{
+      document.querySelectorAll('.petal').forEach(p=>{ p.style.left = rand(-0.08*vw(), vw()*1.08) + 'px'; });
+    });
+  </script>
+</body>
+</html>
